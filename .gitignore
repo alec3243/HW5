@@ -2,6 +2,7 @@
 .metadata
 .project
 .recommenders
+.settings
 bin/
 
 # Compiled class file
