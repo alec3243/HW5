@@ -29,28 +29,29 @@ public class Producer implements Runnable {
 		int totalItems = 0;
 		// Produce
 		while (true) {
+			if (totalItems == MAX_ITEMS) {
+				latch.countDown();
+				break;
+			}
+			lock.lock();
 			try {
-				if (totalItems == MAX_ITEMS) {
-					latch.countDown();
-					break;
-				}
-				lock.lock();
+
 				if (buffer.size() == capacity) {
 					condition.await();
 				}
-				int value = rand.nextInt(10);
-				buffer.add(value);
-				totalItems++;
-				System.out.printf("%s has produced %d%n", Thread
-						.currentThread().getName(), value);
-				condition.signal();
+				if (buffer.size() < capacity) {
+					int value = rand.nextInt(10);
+					buffer.add(value);
+					totalItems++;
+					System.out.printf("%s has produced %d%n", Thread
+							.currentThread().getName(), value);
+					condition.signal();
+				}
 			} catch (InterruptedException e) {
 				System.out.println(Thread.currentThread().getName()
 						+ " has been interrupted.");
 			} finally {
-				if (lock.isHeldByCurrentThread()) {
-					lock.unlock();
-				}
+				lock.unlock();
 			}
 		}
 	}

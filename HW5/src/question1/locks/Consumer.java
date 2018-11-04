@@ -24,28 +24,28 @@ public class Consumer implements Runnable {
 	public void run() {
 		// Consume
 		while (true) {
+			lock.lock();
 			try {
-				lock.lock();
 				if (buffer.size() == 0) {
-					condition.await(100, TimeUnit.MILLISECONDS);
+					condition.await(2, TimeUnit.MILLISECONDS);
 					if (buffer.size() == 0) {
 						latch.countDown();
-					} else {
-						continue;
+						break;
 					}
 				}
-				int value = buffer.poll(); // <--- consume
-				System.out.printf("%s has consumed %d%n", Thread
-						.currentThread().getName(), value);
-				Thread.sleep(1000);
-				condition.signal();
+				Integer value = buffer.poll(); // <--- consume
+				if (value != null) {
+
+					System.out.printf("%s has consumed %d%n", Thread
+							.currentThread().getName(), value);
+					Thread.sleep(1000);
+					condition.signal();
+				}
 			} catch (InterruptedException e) {
 				System.out.println(Thread.currentThread().getName()
 						+ " has been interrupted.");
 			} finally {
-				if (lock.isHeldByCurrentThread()) {
-					lock.unlock();
-				}
+				lock.unlock();
 			}
 		}
 	}
