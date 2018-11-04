@@ -1,6 +1,7 @@
 .classpath
 .metadata
 .project
+.recommenders
 bin/
 
 # Compiled class file
