@@ -1,42 +1,25 @@
 package question1.actors;
 
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.CountDownLatch;
 
 import akka.actor.AbstractActor;
+import akka.actor.Props;
 
 public class Consumer extends AbstractActor {
 
-	private BlockingQueue<Integer> buffer;
-	private CountDownLatch latch;
-
-	Consumer(BlockingQueue<Integer> buffer, CountDownLatch latch) {
-		this.buffer = buffer;
-		this.latch = latch;
+	public static Props props() {
+		return Props.create(Consumer.class);
 	}
 
-	private boolean consume() {
-		if (buffer.size() == 0) {
-			latch.countDown();
-			return false;
-		}
-		Integer value = buffer.poll(); // <--- consume
-		if (value != null) {
-			System.out.printf("%s has consumed %d%n", Thread.currentThread()
-					.getName(), value);
-		}
-		try {
-			Thread.sleep(1000);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
-		return true;
-	}
-
+	@SuppressWarnings("unchecked")
 	@Override
 	public Receive createReceive() {
-		return receiveBuilder().match(Consumer.class, r -> {
-			
-		}).build();
+		return receiveBuilder().matchAny(buffer -> {
+			// Consume the data
+				System.out.printf("%s has consumed %d%n", Thread
+						.currentThread().getName(),
+						((BlockingQueue<Integer>) buffer).poll());
+				Thread.sleep(1000);
+			}).build();
 	}
 }

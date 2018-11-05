@@ -2,51 +2,59 @@ package question1.actors;
 
 import java.util.Random;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicLong;
 
-public class Producer implements Runnable {
+import akka.actor.ActorRef;
+import akka.actor.AbstractActor;
+import akka.actor.Props;
 
-	private BlockingQueue<Integer> buffer;
-	private int capacity;
-	private CountDownLatch latch;
-	private final int MAX_ITEMS = 100;
+public class Producer extends AbstractActor {
+	private static final int MAX_ITEMS = 100;
+	private static final int CAPACITY = 10;
+
 	private int totalItems;
 
-	public Producer(BlockingQueue<Integer> buffer, int capacity,
-			CountDownLatch latch) {
-		this.buffer = buffer;
-		this.capacity = capacity;
-		this.latch = latch;
+	public static Props props() {
+		return Props.create(Producer.class);
 	}
 
 	@Override
-	public void run() {
-		// Produce
-		while (true) {
-			if (!produce()) {
-				break;
-			}
-		}
+	public Receive createReceive() {
+		return receiveBuilder().matchAny(
+				obj -> {
+					BlockingQueue<Integer> buffer = ((ActorBundle) obj)
+							.getBuffer();
+					BlockingQueue<ActorRef> consumers = ((ActorBundle) obj)
+							.getConsumers();
+					Random rand = new Random();
+					main: while (true) {
+						if (totalItems >= MAX_ITEMS) {
+							System.out.println(Thread.currentThread().getName()
+									+ " has finished producing.");
+							((ActorBundle) obj).getLatch().countDown();
+							break main;
+						}
+						while (buffer.size() < CAPACITY) {
+							int value = rand.nextInt(10);
+							buffer.add(value);
+							totalItems++;
+							System.out.printf("%s has produced %d%n", Thread
+									.currentThread().getName(), value);
+							if (totalItems >= MAX_ITEMS) {
+								System.out
+										.println(Thread.currentThread()
+												.getName()
+												+ " has finished producing.");
+								((ActorBundle) obj).getLatch().countDown();
+								break main;
+							}
+						}
+						if (!buffer.isEmpty()) {
+							ActorRef consumer = consumers.poll();
+							consumer.tell(buffer, self());
+							consumers.add(consumer);
+						}
+					}
+					((ActorBundle) obj).getLatch().countDown();
+				}).build();
 	}
-
-	private boolean produce() {
-		Random rand = new Random();
-		if (totalItems == MAX_ITEMS) {
-			latch.countDown();
-			return false;
-		}
-		if (buffer.size() == capacity) {
-			return true;
-		}
-		if (buffer.size() < capacity) {
-			int value = rand.nextInt(10);
-			buffer.add(value);
-			totalItems++;
-			System.out.printf("%s has produced %d%n", Thread.currentThread()
-					.getName(), value);
-		}
-		return true;
-	}
-
 }
